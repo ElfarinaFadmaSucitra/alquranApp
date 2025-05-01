@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,23 +31,36 @@ fun DetailSurahScreen(
     val isLoading = viewModel.isLoading.collectAsState().value
     val surahName = viewModel.surahName.collectAsState().value
     val juz = viewModel.juz.collectAsState().value
+    val mediaPlayer = remember { MediaPlayer() }
+    val currentPlayingAyat = remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(surahId) {
         viewModel.fetchAyatBySurah(surahId)
     }
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Detail Surah", style = MaterialTheme.typography.titleLarge, color = Color.White)
-                        Text(surahName, style = MaterialTheme.typography.titleLarge, color = Color.White)
+                        Text(
+                            "Detail Surah",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White
+                        )
+                        Text(
+                            surahName,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White
+                        )
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali", tint = Color.White)
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Kembali",
+                            tint = Color.White
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -59,57 +73,103 @@ fun DetailSurahScreen(
             if (isLoading) {
                 CircularProgressIndicator(modifier = Modifier.padding(16.dp))
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize().background(Color(0xFFFFF8E7))) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFFFF8E7))
+                        .padding(horizontal = 8.dp)
+                ) {
                     items(ayatList) { ayat ->
-                        Box(
-                            modifier = Modifier.padding(8.dp).fillMaxWidth().background(
-                                    color = if (ayat.numberInSurah % 2 == 0) {
-                                        Color(0xFFE3F2FD) //  ayat genap
-                                    } else {
-                                        Color(0xFFFFF8E7) // ayat ganjil
-                                    }
-                                )
+                        Card(
+                            modifier = Modifier
+                                .padding(vertical = 2.dp)
+                                .fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (ayat.numberInSurah % 2 == 0)
+                                    Color(0xFFE8F5E9)
+                                else
+                                    Color(0xFFFFF3E0)
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 if (ayat == ayatList.first() && juz != 0) {
                                     Text(
                                         "Juz $juz",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = Color(0xFF388E3C),
-                                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = Color(0xFF1B5E20),
+                                        modifier = Modifier
+                                            .align(Alignment.CenterHorizontally)
+                                            .padding(bottom = 8.dp)
                                     )
-                                    Spacer(modifier = Modifier.height(22.dp))
                                 }
+
                                 Text(
                                     "${ayat.numberInSurah}.",
-                                    style = MaterialTheme.typography.bodySmall
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color.Gray
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(6.dp))
+
                                 Text(
                                     ayat.arabText,
                                     style = MaterialTheme.typography.titleLarge,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.End
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                                    modifier = Modifier.fillMaxWidth()
                                 )
-                                Text(ayat.translation, style = MaterialTheme.typography.bodyMedium)
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
 
-                                // tombol audio
-                                val mediaPlayer = remember { MediaPlayer() }
+                                Text(
+                                    ayat.translation,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.DarkGray
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
                                 if (ayat.audioUrl.isNotBlank()) {
-                                    Button(onClick = {
-                                        try {
-                                            mediaPlayer.reset()
-                                            mediaPlayer.setDataSource(ayat.audioUrl)
-                                            mediaPlayer.prepare()
-                                            mediaPlayer.start()
-                                        } catch (e: Exception) {
-                                            e.printStackTrace()
-                                        }
-                                    },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF003366))
+                                    Button(
+                                        onClick = {
+                                            try {
+                                                if (mediaPlayer.isPlaying) {
+                                                    mediaPlayer.stop()
+                                                    mediaPlayer.reset()
+                                                }
+                                                mediaPlayer.setDataSource(ayat.audioUrl)
+                                                mediaPlayer.prepare()
+                                                mediaPlayer.start()
+
+                                                currentPlayingAyat.value = ayat.numberInSurah
+                                            } catch (e: Exception) {
+                                                e.printStackTrace()
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFF2E7D32)
+                                        )
                                     ) {
-                                        Text("Play", color = Color.White)
+                                        Text(
+                                            text = "Play",
+                                            color = Color.White
+                                        )
+                                    }
+                                    if (currentPlayingAyat.value == ayat.numberInSurah) {
+                                        Button(
+                                            onClick = {
+                                                if (mediaPlayer.isPlaying) {
+                                                    mediaPlayer.stop()
+                                                    mediaPlayer.reset()
+                                                }
+                                                currentPlayingAyat.value = null
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color(0xFF2E7D32)
+                                            )
+                                        ) {
+                                            Text(
+                                                text = "Stop",
+                                                color = Color.White
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -120,4 +180,5 @@ fun DetailSurahScreen(
         }
     }
 }
+
 

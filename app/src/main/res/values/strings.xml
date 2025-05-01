@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">alquran</string>
+    <string name="default_web_client_id">alquran-f1b53</string>
 </resources>
